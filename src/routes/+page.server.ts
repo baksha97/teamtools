@@ -7,7 +7,7 @@ import { zfd } from "zod-form-data";
 
 export const load = async ({ locals }) => {
   const userProfile = await getOrCreateUserProfile(locals);
-
+  console.log("[routes/+page.server.ts] userProfile", userProfile);
   return {
     userProfile,
   };
