@@ -34,7 +34,7 @@
 <div class="flex min-h-screen flex-col">
 	<nav class="border-b p-2">
 		<div class="mx-auto flex w-full max-w-2xl items-center justify-between">
-			<a href="/" class="text-2xl font-bold">App</a>
+			<a href="/" class="text-2xl font-bold">Team Tools</a>
 
 			<div class="flex gap-2">
 				<ThemeToggle />
@@ -49,11 +49,11 @@
 		{@render children()}
 	</main>
 
-	<footer class="w-full border-t py-5">
+	<!-- <footer class="w-full border-t py-5">
 		<div class="mx-auto flex w-full max-w-2xl items-center justify-center">
 			<a href="https://github.com/engageintellect" class="text-sm">@engageintellect</a>
 		</div>
-	</footer>
+	</footer> -->
 </div>
 
 <style>

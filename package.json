@@ -40,7 +40,7 @@
 		"@iconify/svelte": "^4.0.2",
 		"@supabase/ssr": "^0.3.0",
 		"@supabase/supabase-js": "^2.43.4",
-		"bits-ui": "^0.21.10",
+		"bits-ui": "^0.21.11",
 		"clsx": "^2.1.1",
 		"drizzle-orm": "^0.30.10",
 		"lucide-svelte": "^0.399.0",
