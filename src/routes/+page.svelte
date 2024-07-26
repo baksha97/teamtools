@@ -6,12 +6,11 @@
 	let avatar: string;
 
 	// Reactive statement to update avatar when data changes
-	$: profile = data?.userProfile || '';
-	$: avatar = data?.user?.user_metadata?.avatar_url || '';
+	$: session = data?.session;
 </script>
 
-{#if data?.userProfile}
-	<UpdateProfile {profile} {avatar} />
+{#if session}
+	You are logged in!
 {:else}
 	<Hero />
 {/if}
