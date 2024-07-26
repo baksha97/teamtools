@@ -14,9 +14,11 @@ import type { LayoutLoad } from "./$types";
 
 export const load: LayoutLoad = async ({ parent, data }) => {
   const parentdata = await parent();
-  console.log("[routes/profile/+layout.ts] parentdata", parentdata);
+  // console.log("[routes/profile/+layout.ts] parentdata", parentdata);
+  console.log("[routes/profile/+layout.ts] data", data);
   // console.log("[routes/+layout.ts] supabase", supabase);
   return { 
+      // ...data,
       ...parentdata
   };
 };
