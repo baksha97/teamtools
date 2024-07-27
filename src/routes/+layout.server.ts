@@ -1,7 +1,9 @@
 import type { LayoutServerLoad } from "./$types";
-
-export const load: LayoutServerLoad = async ({ locals: { session } }) => {
+import { getOrCreateUserProfile } from "$lib/auth";
+export const load: LayoutServerLoad = async ({ locals }) => {
+  const profile = await getOrCreateUserProfile(locals);
   return {
-    session,
+    profile: profile,
+    session: locals.session,
   };
 };

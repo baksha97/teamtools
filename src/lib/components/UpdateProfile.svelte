@@ -6,7 +6,7 @@
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
 
-	export let userProfile;
+	export let profile;
 	export let avatar;
 </script>
 
@@ -24,10 +24,10 @@
 		<form
 			method="post"
 			use:enhance={({ formData }) => {
-				formData.set('firstName', userProfile.firstName);
-				formData.set('lastName', userProfile.lastName);
-				formData.set('email', userProfile.email);
-				formData.set('username', userProfile.username);
+				formData.set('firstName', profile.firstName);
+				formData.set('lastName', profile.lastName);
+				formData.set('email', profile.email);
+				formData.set('username', profile.username);
 				return ({ result }) => {
 					if (result.type === 'success') {
 						invalidate('/');
@@ -41,17 +41,17 @@
 			<div class="flex items-center gap-2">
 				<div class="w-full">
 					<Label>First Name</Label>
-					<Input bind:value={userProfile.firstName} />
+					<Input bind:value={profile.firstName} />
 				</div>
 				<div class="w-full">
 					<Label>Last Name</Label>
-					<Input bind:value={userProfile.lastName} />
+					<Input bind:value={profile.lastName} />
 				</div>
 			</div>
 
 			<div class="mt-4">
 				<Label>Email</Label>
-				<Input bind:value={userProfile.email} />
+				<Input bind:value={profile.email} />
 			</div>
 
 			<div class="mt-5">

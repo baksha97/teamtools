@@ -5,19 +5,20 @@ import { error } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import { zfd } from "zod-form-data";
 
-export const load = async ({ locals }) => {
-  const userProfile = await getOrCreateUserProfile(locals);
-
+export const load = async ({ parent, locals }) => {
+  const parentData = await parent();
+  console.log("[routes/profile/+page.server.ts] parentData ", parentData);
   return {
-    userProfile,
+    ...parentData,
   };
 };
 
+
 export const actions = {
   default: async ({ request, locals }) => {
-    const userProfile = await getOrCreateUserProfile(locals);
+    const profile = await getOrCreateUserProfile(locals);
 
-    if (!userProfile) {
+    if (!profile) {
       error(401, "You need to be logged in!");
     }
 
@@ -37,8 +38,9 @@ export const actions = {
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
-    }).where(eq(profileTable.id, userProfile.id));
+    }).where(eq(profileTable.id, profile.id));
 
     return { success: true };
   },
 };
+
