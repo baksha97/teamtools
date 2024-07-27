@@ -5,7 +5,7 @@
 	import { Button } from '$lib/components/ui/button';
 	// Define your micro apps here
 	const microApps = [
-		{ name: 'App 1', path: '/app1', icon: '📊' },
+		{ name: 'Profile', path: '/profile', icon: '👤' },
 		{ name: 'App 2', path: '/app2', icon: '📁' },
 		{ name: 'App 3', path: '/app3', icon: '📅' }
 		// Add more apps as needed
