@@ -29,7 +29,7 @@
 	function initializeRoom() {
 		if (!roomStore && user && supabase) {
 			roomStore = createRoomStore(supabase);
-			roomStore.joinRoom(roomId, user.id);
+			roomStore.joinRoom(roomId, user.id, user.user_metadata.avatar_url);
 
 			const unsubscribe = roomStore.subscribe((state) => {
 				participants = state.participants;
@@ -86,7 +86,7 @@
 					{#each participants as participant}
 						<Avatar.Root>
 							<Avatar.Image
-								src={`https://api.dicebear.com/6.x/initials/svg?seed=${participant.user_id}`}
+								src={participant.avatar_url}
 								alt={participant.user_id}
 							/>
 							<Avatar.Fallback>{participant.user_id.substring(0, 2)}</Avatar.Fallback>

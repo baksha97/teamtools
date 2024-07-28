@@ -8,6 +8,7 @@ export interface Room {
 
 export interface Participant {
   user_id: string;
+  avatar_url: string;
 }
 
 export interface RoomStoreState {
@@ -22,7 +23,7 @@ export interface RoomStoreType {
   subscribe: (run: (value: RoomStoreState) => void) => () => void;
   createRoom: (roomId: string, creatorId: string) => Promise<void>;
   listRooms: () => Promise<void>;
-  joinRoom: (roomId: string, userId: string) => Promise<void>;
+  joinRoom: (roomId: string, userId: string, avatarUrl: string) => Promise<void>;
   setCurrentTicket: (ticketId: string) => void;
   vote: (userId: string, vote: string | null) => void;
   resetVotes: () => void;
@@ -78,7 +79,7 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
     update(state => ({ ...state, rooms: data as Room[] }));
   }
 
-  async function joinRoom(roomId: string, userId: string) {
+  async function joinRoom(roomId: string, userId: string, avatarUrl: string) {
     await init();
 
     update(state => {
@@ -128,14 +129,17 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
         console.log("Presence state:", presenceState);
         const participants = Object.values(presenceState)
           .flat()
-          .map(state => ({ user_id: (state as any).user_id }));
+          .map(state => ({ 
+            user_id: (state as any).user_id, 
+            avatar_url: (state as any).avatar_url 
+          }));
         console.log("Participants:", participants);
         update(innerState => ({ ...innerState, participants }));
       });
 
       room.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          room.track({ user_id: userId, online_at: new Date().toISOString() });
+          room.track({ user_id: userId, avatar_url: avatarUrl, online_at: new Date().toISOString() });
         }
       });
 
