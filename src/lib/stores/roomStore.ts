@@ -103,7 +103,7 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
         .on('broadcast', { event: 'vote' }, (payload) => {
           console.log('Received vote broadcast:', payload);
           update(state => {
-            const { userId, vote } = payload.payload;
+            const { userId, vote } = payload;
             console.log('Updating vote for user:', userId, 'with vote:', vote);
             
             const newVotes = { ...state.votes };
@@ -164,7 +164,8 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
         state.currentRoom.send({
           type: 'broadcast',
           event: 'vote',
-          payload: { userId, vote },
+          userId,
+          vote
         });
       }
       const newVotes = { ...state.votes };
