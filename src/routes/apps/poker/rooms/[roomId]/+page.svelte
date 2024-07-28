@@ -8,22 +8,21 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Collapsible from '$lib/components/ui/collapsible';
+	import { Loader2 } from 'lucide-svelte';
+	import VoteReveal from '$lib/components/VoteReveal.svelte';
 
 	let roomStore: RoomStoreType;
 	let newTicket = '';
 	let participants: any[] = [];
 	let currentTicket: string | null = null;
 	let votes: Record<string, string> = {};
+	let isVotingComplete = false;
 	export let data;
 	$: roomId = $page.params.roomId;
 	const { session, user, supabase } = data;
 
 	$: if (roomId && supabase && session) {
 		initializeRoom();
-	}
-
-	$: if (roomStore && currentTicket) {
-		console.log('Current ticket updated:', currentTicket);
 	}
 
 	function initializeRoom() {
@@ -35,14 +34,10 @@
 				participants = state.participants;
 				currentTicket = state.currentTicket;
 				votes = state.votes;
-				console.log(
-					'Store updated:',
-					JSON.parse(JSON.stringify({ participants, currentTicket, votes }))
-				);
+				isVotingComplete = Object.keys(votes).length === participants.length;
 			});
 
 			onDestroy(() => {
-				console.log('Component is being destroyed, leaving room');
 				if (roomStore) {
 					roomStore.leaveRoom();
 				}
@@ -53,7 +48,6 @@
 
 	function handleSetTicket() {
 		if (roomStore && newTicket) {
-			console.log('Setting new ticket:', newTicket);
 			roomStore.setCurrentTicket(newTicket);
 			newTicket = '';
 		}
@@ -61,7 +55,6 @@
 
 	function handleVote(vote: string) {
 		if (roomStore && user) {
-			console.log('Handling vote:', user.id, vote);
 			roomStore.vote(user.id, vote);
 		}
 	}
@@ -72,24 +65,30 @@
 		}
 	}
 
-	$: console.log('User:', user);
-	$: console.log('Votes in component:', votes);
-	$: console.log('Current ticket in component:', currentTicket);
+	$: voteOptions = ['1', '2', '3', '5', '8', '13', '21', '34', '?'];
+	$: userVote = votes[user?.id];
+	$: voteResults = Object.entries(votes).reduce(
+		(acc, [userId, vote]) => {
+			acc[vote] = (acc[vote] || 0) + 1;
+			return acc;
+		},
+		{} as Record<string, number>
+	);
 </script>
 
 {#if session && roomId && supabase}
-	<div class="container mx-auto p-4">
+	<div class="container mx-auto max-w-3xl p-4">
 		<Card.Root class="mb-6">
+			<Card.Header>
+				<Card.Title class="text-2xl">Planning Poker: Room {roomId}</Card.Title>
+				<Card.Description>Participants: {participants.length}</Card.Description>
+			</Card.Header>
 			<Card.Content>
-				<h1 class="mb-4 text-2xl font-bold">Room: {roomId}</h1>
 				<div class="flex flex-wrap gap-2">
 					{#each participants as participant}
-						<Avatar.Root>
-							<Avatar.Image
-								src={participant.avatar_url}
-								alt={participant.user_id}
-							/>
-							<Avatar.Fallback>{participant.user_id.substring(0, 2)}</Avatar.Fallback>
+						<Avatar.Root class="border-2 border-primary">
+							<Avatar.Image src={participant.avatar_url} alt={participant.user_id} />
+							<Avatar.Fallback>{participant.user_id.substring(0, 2).toUpperCase()}</Avatar.Fallback>
 						</Avatar.Root>
 					{/each}
 				</div>
@@ -97,44 +96,77 @@
 		</Card.Root>
 
 		<Card.Root class="mb-6">
+			<Card.Header>
+				<Card.Title>Current Ticket</Card.Title>
+			</Card.Header>
 			<Card.Content>
-				<h2 class="mb-2 text-xl font-semibold">Current Ticket</h2>
-				<p class="mb-4">{currentTicket || 'No ticket set'}</p>
+				{#if currentTicket}
+					<p class="mb-4 text-lg font-medium">{currentTicket}</p>
+				{:else}
+					<p class="mb-4 text-muted-foreground">No ticket set</p>
+				{/if}
 				<div class="flex gap-2">
 					<Input bind:value={newTicket} placeholder="Enter new ticket" />
-					<Button on:click={handleSetTicket}>Set Ticket</Button>
+					<Button on:click={handleSetTicket} disabled={!newTicket}>Set Ticket</Button>
 				</div>
 			</Card.Content>
 		</Card.Root>
 
 		<Card.Root class="mb-6">
+			<Card.Header>
+				<Card.Title>Your Vote</Card.Title>
+			</Card.Header>
 			<Card.Content>
-				<h2 class="mb-2 text-xl font-semibold">Votes</h2>
 				<div class="mb-4 grid grid-cols-3 gap-2">
-					{#each ['1', '2', '3', '5', '8', '13', '21', '34', '?'] as voteOption}
+					{#each voteOptions as voteOption}
 						<Button
-							variant={votes[user.id] === voteOption ? 'default' : 'outline'}
+							variant={userVote === voteOption ? 'default' : 'outline'}
 							on:click={() => handleVote(voteOption)}
+							disabled={isVotingComplete}
 						>
 							{voteOption}
 						</Button>
 					{/each}
 				</div>
-				<Button on:click={handleResetVotes}>Reset Votes</Button>
+				<Button on:click={handleResetVotes} variant="destructive">Reset Votes</Button>
 			</Card.Content>
 		</Card.Root>
 
 		<Card.Root>
+			<Card.Header>
+				<Card.Title>Vote Results</Card.Title>
+			</Card.Header>
 			<Card.Content>
-				<h2 class="mb-2 text-xl font-semibold">Vote Results</h2>
-				<ul>
-					{#each Object.entries(votes) as [userId, vote]}
-						<li>{userId}: {vote}</li>
-					{/each}
-				</ul>
+				{#if isVotingComplete}
+					<Collapsible.Root>
+						<Collapsible.Trigger class="mb-4 w-full">
+							<Button variant="outline" class="w-full">Show Detailed Results</Button>
+						</Collapsible.Trigger>
+						<Collapsible.Content>
+							<VoteReveal {votes} {participants} />
+						</Collapsible.Content>
+					</Collapsible.Root>
+					<div class="mt-4 grid grid-cols-3 gap-4">
+						{#each Object.entries(voteResults) as [vote, count]}
+							<div class="rounded border p-2 text-center">
+								<div class="text-2xl font-bold">{vote}</div>
+								<div class="text-sm text-muted-foreground">
+									{count} vote{count !== 1 ? 's' : ''}
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<div class="p-4 text-center">
+						<Loader2 class="mx-auto mb-2 h-8 w-8 animate-spin" />
+						<p class="text-muted-foreground">Waiting for all votes...</p>
+					</div>
+				{/if}
 			</Card.Content>
 		</Card.Root>
 	</div>
 {:else}
-	<p>Loading or not authenticated...</p>
+	<div class="flex h-screen items-center justify-center">
+		<Loader2 class="h-12 w-12 animate-spin" />
+	</div>
 {/if}
