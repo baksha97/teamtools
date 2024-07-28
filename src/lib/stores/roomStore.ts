@@ -26,6 +26,7 @@ export interface RoomStoreType {
   setCurrentTicket: (ticketId: string) => void;
   vote: (userId: string, vote: string | null) => void;
   resetVotes: () => void;
+  leaveRoom: () => void;
 }
 
 export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
@@ -93,13 +94,14 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
       const room = supabase.channel(`room-${roomId}`);
 
       room
-        .on('broadcast', { event: 'set-ticket' }, (payload) => {
-          console.log('Received set-ticket broadcast:', payload);
-          update(innerState => {
-            console.log('Updating current ticket to:', payload.ticketId);
-            return { ...innerState, currentTicket: payload.ticketId, votes: {} };
-          });
-        })
+      .on('broadcast', { event: 'set-ticket' }, (payload) => {
+        console.log('Received set-ticket broadcast:', payload);
+        update(state => {
+          const newTicket = payload.ticketId;
+          console.log('Updating current ticket to:', newTicket);
+          return { ...state, currentTicket: newTicket, votes: {} };
+        });
+      })
         .on('broadcast', { event: 'vote' }, (payload) => {
           console.log('Received vote broadcast:', payload);
           update(state => {
@@ -150,12 +152,25 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
         state.currentRoom.send({
           type: 'broadcast',
           event: 'set-ticket',
-          payload: { ticketId },
+          ticketId
         });
       }
       return { ...state, currentTicket: ticketId, votes: {} };
     });
   }
+
+  function leaveRoom() {
+    update(state => {
+      if (state.currentRoom) {
+        console.log('Leaving room:', state.currentRoom.topic);
+        state.currentRoom.unsubscribe();
+        state.currentRoom.untrack();
+      }
+      return { ...state, currentRoom: null, participants: [], currentTicket: null, votes: {} };
+    });
+  }
+
+  
 
   function vote(userId: string, vote: string | null) {
     update(state => {
@@ -196,6 +211,7 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
     createRoom,
     listRooms,
     joinRoom,
+    leaveRoom,
     setCurrentTicket,
     vote,
     resetVotes,
