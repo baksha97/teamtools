@@ -6,7 +6,7 @@
 	// Define your micro apps here
 	const microApps = [
 		{ name: 'Profile', path: '/profile', icon: '👤' },
-		{ name: 'Poker', path: '/apps/poker', icon: '📁' },
+		{ name: 'Poker', path: '/apps/poker/rooms', icon: '📁' },
 		{ name: 'App 3', path: '/app3', icon: '📅' }
 		// Add more apps as needed
 	];

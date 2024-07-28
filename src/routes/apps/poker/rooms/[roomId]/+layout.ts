@@ -14,9 +14,8 @@ import type { LayoutLoad } from "./$types";
 
 export const load: LayoutLoad = async ({ parent, data }) => {
   const parentdata = await parent();
-  // console.log("[routes/profile/+layout.ts] parentdata", parentdata);
-  // console.log("[routes/apps/poker/+layout.ts] data", data);
-  // console.log("[routes/+layout.ts] supabase", supabase);
+  // console.log("[/routes/apps/poker/rooms/[roomId]/+layout.ts] parentdata", parentdata);
+  // console.log("[/routes/apps/poker/rooms/[roomId]/+layout.ts] data", data);
   return { 
       // ...data,
       ...parentdata

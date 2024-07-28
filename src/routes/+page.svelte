@@ -11,7 +11,6 @@
 	let fullName = "";
 	$: fullName = data.user?.user_metadata.full_name;
 	$: avatar = data.user?.user_metadata?.avatar_url;
-	$: console.log(session)
 </script>
 
 {#if session}
