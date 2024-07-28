@@ -8,18 +8,19 @@
     import { Button } from '$lib/components/ui/button';
     import { Input } from '$lib/components/ui/input';
     import * as Collapsible from '$lib/components/ui/collapsible';
+    
     let roomStore: RoomStoreType;
     let newTicket = '';
     let participants: any[] = [];
     let currentTicket: string | null = null;
     let votes: Record<string, string> = {};
-	export let data;
-	$: roomId = $page.params.roomId;
-	const { session, user, supabase } = data;
+    export let data;
+    $: roomId = $page.params.roomId;
+    const { session, user, supabase } = data;
 
-    // $: if (roomId && supabase && session) {
-    //     initializeRoom();
-    // }
+    $: if (roomId && supabase && session) {
+        initializeRoom();
+    }
 
     function initializeRoom() {
         if (!roomStore && user && supabase) {
@@ -30,11 +31,13 @@
                 participants = state.participants;
                 currentTicket = state.currentTicket;
                 votes = state.votes;
+                console.log('Store updated:', { participants, currentTicket, votes });
             });
 
             onDestroy(unsubscribe);
         }
     }
+
     function handleSetTicket() {
         if (roomStore && newTicket) {
             roomStore.setCurrentTicket(newTicket);
@@ -44,6 +47,7 @@
 
     function handleVote(vote: string) {
         if (roomStore && user) {
+            console.log('Handling vote:', user.id, vote);
             roomStore.vote(user.id, vote);
         }
     }
@@ -53,6 +57,10 @@
             roomStore.resetVotes();
         }
     }
+
+    $: console.log('User:', user);
+    $: console.log('Votes in component:', votes);
+    $: console.log('Current ticket in component:', currentTicket);
 </script>
 
 {#if session && roomId && supabase}
