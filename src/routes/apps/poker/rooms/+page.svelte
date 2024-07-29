@@ -1,16 +1,15 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { createRoomStore } from '$lib/stores/roomStore';
+    import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import type { RoomStoreType, Room } from '$lib/stores/roomStore';
+  import { RoomsStore, type Room } from '$lib/stores/roomsStore';
   import * as Card from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { Plus, Loader2 } from 'lucide-svelte';
 
   let newRoomId = '';
-  let roomStore: RoomStoreType;
+  let roomsStore: RoomsStore; 
   let rooms: Room[] = [];
   let isLoading = true;
 
@@ -18,12 +17,12 @@
   $: user = $page.data.user;
 
   onMount(async () => {
-    roomStore = createRoomStore(supabase);
-    roomStore.subscribe(state => {
-      rooms = state.rooms;
+    roomsStore = RoomsStore.setContext(supabase);
+    roomsStore.subscribe(state => {
+      rooms = state;
     });
-    await roomStore.listRooms();
-    await roomStore.initRoomSubscription();
+    await roomsStore.listRooms();
+    await roomsStore.initRoomSubscription();
     isLoading = false;
   });
 
@@ -32,7 +31,7 @@
       alert('Please enter a room ID');
       return;
     }
-    await roomStore.createRoom(newRoomId, user.id);
+    await roomsStore.createRoom(newRoomId, user.id);
     goto(`/apps/poker/rooms/${newRoomId}`);
   }
 </script>

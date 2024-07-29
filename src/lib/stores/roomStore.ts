@@ -1,10 +1,7 @@
+// src/lib/stores/RoomStore.ts
 import { writable } from 'svelte/store';
 import type { SupabaseClient } from '@supabase/supabase-js';
-
-export interface Room {
-  id: string;
-  creator_id: string;
-}
+import { setContext, getContext } from 'svelte';
 
 export interface Participant {
   user_id: string;
@@ -12,221 +9,188 @@ export interface Participant {
   name: string;
 }
 
-export interface RoomStoreState {
-  rooms: Room[];
-  currentRoom: ReturnType<SupabaseClient['channel']> | null;
+export interface RoomState {
+  roomId: string;
   participants: Participant[];
   currentTicket: string | null;
   votes: Record<string, string>;
+  roomOwner: string | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
-export interface RoomStoreType {
-  subscribe: (run: (value: RoomStoreState) => void) => () => void;
-  createRoom: (roomId: string, creatorId: string) => Promise<void>;
-  listRooms: () => Promise<void>;
-  joinRoom: (roomId: string, userId: string, avatarUrl: string, userName: string) => Promise<void>;
-  setCurrentTicket: (ticketId: string) => void;
-  vote: (userId: string, vote: string | null) => void;
-  resetVotes: () => void;
-  leaveRoom: () => void;
-  initRoomSubscription: () => Promise<void>; // Add this line
-}
+const ROOM_STORE_KEY = 'roomStore';
 
-export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
-  const { subscribe, update, set } = writable<RoomStoreState>({
-    rooms: [],
-    currentRoom: null,
+export class RoomStore {
+  private supabase: SupabaseClient;
+  private store = writable<RoomState>({
+    roomId: '',
     participants: [],
     currentTicket: null,
     votes: {},
+    roomOwner: null,
+    isLoading: true,
+    error: null
   });
+  private channel: ReturnType<SupabaseClient['channel']> | null = null;
 
-  let initialized = false;
-
-  async function init() {
-    if (initialized) return;
-    initialized = true;
-
-    await initRoomSubscription();
-    await listRooms();
+  constructor(supabase: SupabaseClient) {
+    this.supabase = supabase;
   }
 
-  async function initRoomSubscription() {
-    if (initialized) return; // Add this line to prevent multiple initializations
-    initialized = true;      // Add this line
-    supabase
-      .channel('public:rooms')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rooms' }, payload => {
-        const newRoom: Room = {
-          id: payload.new.id,
-          creator_id: payload.new.creator_id,
-        };
-        update(state => ({ ...state, rooms: [...state.rooms, newRoom] }));
+  async initializeRoom(roomId: string, userId: string, avatarUrl: string, userName: string) {
+    this.store.update(state => ({ ...state, isLoading: true, error: null }));
+
+    try {
+      await this.fetchRoomDetails(roomId);
+      await this.joinRoom(roomId, userId, avatarUrl, userName);
+      this.store.update(state => ({ ...state, isLoading: false }));
+    } catch (error) {
+      console.error('Error initializing room:', error);
+      this.store.update(state => ({ 
+        ...state, 
+        isLoading: false, 
+        error: error instanceof Error ? error.message : 'An unknown error occurred' 
+      }));
+    }
+  }
+
+  private async fetchRoomDetails(roomId: string) {
+    const { data, error } = await this.supabase
+      .from('rooms')
+      .select('creator_id')
+      .eq('id', roomId)
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    this.store.update(state => ({
+      ...state,
+      roomId,
+      roomOwner: data.creator_id
+    }));
+  }
+
+  private async joinRoom(roomId: string, userId: string, avatarUrl: string, userName: string) {
+    if (this.channel) {
+      this.channel.unsubscribe();
+    }
+
+    this.channel = this.supabase.channel(`room-${roomId}`);
+
+    this.channel
+      .on('broadcast', { event: 'set-ticket' }, (payload) => {
+        this.store.update(state => ({ ...state, currentTicket: payload.ticketId, votes: {} }));
       })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'rooms' }, payload => {
-        update(state => ({
-          ...state,
-          rooms: state.rooms.filter(room => room.id !== payload.old.id)
+      .on('broadcast', { event: 'vote' }, (payload) => {
+        this.store.update(state => {
+          const { userId, vote } = payload;
+          const newVotes = { ...state.votes };
+          if (vote === null) {
+            delete newVotes[userId];
+          } else {
+            newVotes[userId] = vote;
+          }
+          return { ...state, votes: newVotes };
+        });
+      })
+      .on('broadcast', { event: 'reset-votes' }, () => {
+        this.store.update(state => ({ ...state, votes: {} }));
+      });
+
+    this.channel.on('presence', { event: 'sync' }, () => {
+      const presenceState = this.channel!.presenceState();
+      const participants = Object.values(presenceState)
+        .flat()
+        .map(state => ({ 
+          user_id: (state as any).user_id, 
+          avatar_url: (state as any).avatar_url,
+          name: (state as any).name
         }));
-      })
-      .subscribe();
-  }
+      this.store.update(state => ({ ...state, participants }));
+    });
 
-  async function createRoom(roomId: string, creatorId: string) {
-    const { error } = await supabase.from('rooms').insert([{ id: roomId, creator_id: creatorId }]);
-    if (error) throw new Error(error.message);
-  }
-
-  async function listRooms() {
-    const { data, error } = await supabase.from('rooms').select('*');
-    if (error) throw new Error(error.message);
-    update(state => ({ ...state, rooms: data as Room[] }));
-  }
-
-  async function joinRoom(roomId: string, userId: string, avatarUrl: string, userName: string) {
-    await init();
-
-    update(state => {
-      if (state.currentRoom && state.currentRoom.topic === `room-${roomId}`) {
-        console.log('Already in this room, not rejoining');
-        return state;
-      }
-
-      if (state.currentRoom) {
-        state.currentRoom.unsubscribe();
-      }
-
-      const room = supabase.channel(`room-${roomId}`);
-
-      room
-        .on('broadcast', { event: 'set-ticket' }, (payload) => {
-          console.log('Received set-ticket broadcast:', payload);
-          update(state => {
-            const newTicket = payload.ticketId;
-            console.log('Updating current ticket to:', newTicket);
-            return { ...state, currentTicket: newTicket, votes: {} };
-          });
-        })
-        .on('broadcast', { event: 'vote' }, (payload) => {
-          console.log('Received vote broadcast:', payload);
-          update(state => {
-            const { userId, vote } = payload;
-            console.log('Updating vote for user:', userId, 'with vote:', vote);
-            
-            const newVotes = { ...state.votes };
-            if (vote === null) {
-              delete newVotes[userId];
-            } else {
-              newVotes[userId] = vote;
-            }
-            
-            console.log('Updated votes:', newVotes);
-            return { ...state, votes: newVotes };
-          });
-        })
-        .on('broadcast', { event: 'reset-votes' }, () => {
-          update(innerState => ({ ...innerState, votes: {} }));
+    this.channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        this.channel!.track({ 
+          user_id: userId, 
+          avatar_url: avatarUrl, 
+          name: userName,
+          online_at: new Date().toISOString() 
         });
+      }
+    });
+  }
 
-      room.on('presence', { event: 'sync' }, () => {
-        const presenceState = room.presenceState();
-        console.log("Presence state:", presenceState);
-        const participants = Object.values(presenceState)
-          .flat()
-          .map(state => ({ 
-            user_id: (state as any).user_id, 
-            avatar_url: (state as any).avatar_url,
-            name: (state as any).name
-          }));
-        console.log("Participants:", participants);
-        update(innerState => ({ ...innerState, participants }));
+  setCurrentTicket(ticketId: string) {
+    if (this.channel) {
+      this.channel.send({
+        type: 'broadcast',
+        event: 'set-ticket',
+        ticketId
       });
+    }
+    this.store.update(state => ({ ...state, currentTicket: ticketId, votes: {} }));
+  }
 
-      room.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          room.track({ 
-            user_id: userId, 
-            avatar_url: avatarUrl, 
-            name: userName,
-            online_at: new Date().toISOString() 
-          });
-        }
+  leaveRoom() {
+    if (this.channel) {
+      this.channel.unsubscribe();
+      this.channel.untrack();
+    }
+    this.store.set({
+      roomId: '',
+      participants: [],
+      currentTicket: null,
+      votes: {},
+      roomOwner: null,
+      isLoading: false,
+      error: null
+    });
+    this.channel = null;
+  }
+
+  vote(userId: string, vote: string | null) {
+    if (this.channel) {
+      this.channel.send({
+        type: 'broadcast',
+        event: 'vote',
+        userId,
+        vote
       });
-
-      return { ...state, currentRoom: room, currentTicket: null, votes: {} };
-    });
-
-    console.log('Joined room:', roomId);
-  }
-
-  function setCurrentTicket(ticketId: string) {
-    update(state => {
-      if (state.currentRoom) {
-        console.log('Setting current ticket:', ticketId);
-        state.currentRoom.send({
-          type: 'broadcast',
-          event: 'set-ticket',
-          ticketId
-        });
-      }
-      return { ...state, currentTicket: ticketId, votes: {} };
-    });
-  }
-
-  function leaveRoom() {
-    update(state => {
-      if (state.currentRoom) {
-        console.log('Leaving room:', state.currentRoom.topic);
-        state.currentRoom.unsubscribe();
-        state.currentRoom.untrack();
-      }
-      return { ...state, currentRoom: null, participants: [], currentTicket: null, votes: {} };
-    });
-  }
-
-  function vote(userId: string, vote: string | null) {
-    update(state => {
-      if (state.currentRoom) {
-        console.log('Sending vote:', userId, vote);
-        state.currentRoom.send({
-          type: 'broadcast',
-          event: 'vote',
-          userId,
-          vote
-        });
-      }
+    }
+    this.store.update(state => {
       const newVotes = { ...state.votes };
       if (vote === null) {
         delete newVotes[userId];
       } else {
         newVotes[userId] = vote;
       }
-      console.log('Updated votes in store:', newVotes);
       return { ...state, votes: newVotes };
     });
   }
 
-  function resetVotes() {
-    update(state => {
-      if (state.currentRoom) {
-        state.currentRoom.send({
-          type: 'broadcast',
-          event: 'reset-votes',
-        });
-      }
-      return { ...state, votes: {} };
-    });
+  resetVotes() {
+    if (this.channel) {
+      this.channel.send({
+        type: 'broadcast',
+        event: 'reset-votes',
+      });
+    }
+    this.store.update(state => ({ ...state, votes: {} }));
   }
 
-  return {
-    subscribe,
-    createRoom,
-    listRooms,
-    joinRoom,
-    leaveRoom,
-    setCurrentTicket,
-    vote,
-    resetVotes,
-    initRoomSubscription, // Add this line
-  };
+  subscribe(run: (value: RoomState) => void) {
+    return this.store.subscribe(run);
+  }
+
+  static setContext(supabase: SupabaseClient) {
+    const store = new RoomStore(supabase);
+    setContext(ROOM_STORE_KEY, store);
+    return store;
+  }
+
+  static getContext() {
+    return getContext<RoomStore>(ROOM_STORE_KEY);
+  }
 }
