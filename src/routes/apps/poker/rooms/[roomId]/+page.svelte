@@ -8,8 +8,10 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Collapsible from '$lib/components/ui/collapsible';
-	import { Loader2 } from 'lucide-svelte';
+	import { Loader2, Crown, ChevronDown, ChevronUp, Users, Settings } from 'lucide-svelte';
 	import VoteReveal from '$lib/components/VoteReveal.svelte';
+	import * as Switch from '$lib/components/ui/switch';
+	import * as Label from '$lib/components/ui/label';
 
 	let roomStore: RoomStoreType;
 	let newTicket = '';
@@ -17,9 +19,13 @@
 	let currentTicket: string | null = null;
 	let votes: Record<string, string> = {};
 	let isVotingComplete = false;
+	let roomOwner: string | null = null;
+	let isParticipantListOpen = true;
 	export let data;
 	$: roomId = $page.params.roomId;
 	const { session, user, supabase } = data;
+
+	$: isRoomOwner = user?.id === roomOwner;
 
 	$: if (roomId && supabase && session) {
 		initializeRoom();
@@ -28,13 +34,22 @@
 	function initializeRoom() {
 		if (!roomStore && user && supabase) {
 			roomStore = createRoomStore(supabase);
-			roomStore.joinRoom(roomId, user.id, user.user_metadata.avatar_url);
+			roomStore.joinRoom(
+				roomId,
+				user.id,
+				user.user_metadata.avatar_url,
+				user.user_metadata.full_name || user.email
+			);
 
 			const unsubscribe = roomStore.subscribe((state) => {
 				participants = state.participants;
 				currentTicket = state.currentTicket;
 				votes = state.votes;
 				isVotingComplete = Object.keys(votes).length === participants.length;
+				
+				// Find the room owner
+				const room = state.rooms.find(r => r.id === roomId);
+				roomOwner = room ? room.creator_id : null;
 			});
 
 			onDestroy(() => {
@@ -74,25 +89,78 @@
 		},
 		{} as Record<string, number>
 	);
+	$: nonVoters = participants.filter(p => !votes[p.user_id]);
 </script>
 
 {#if session && roomId && supabase}
 	<div class="container mx-auto max-w-3xl p-4">
 		<Card.Root class="mb-6">
-			<Card.Header>
-				<Card.Title class="text-2xl">Planning Poker: Room {roomId}</Card.Title>
-				<Card.Description>Participants: {participants.length}</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				<div class="flex flex-wrap gap-2">
-					{#each participants as participant}
-						<Avatar.Root class="border-2 border-primary">
-							<Avatar.Image src={participant.avatar_url} alt={participant.user_id} />
-							<Avatar.Fallback>{participant.user_id.substring(0, 2).toUpperCase()}</Avatar.Fallback>
-						</Avatar.Root>
-					{/each}
-				</div>
-			</Card.Content>
+			<Collapsible.Root bind:open={isParticipantListOpen}>
+				<Card.Header>
+					<div class="flex items-center justify-between">
+						<Collapsible.Trigger class="flex items-center">
+							<Card.Title class="text-2xl">{roomId}</Card.Title>
+							{#if isParticipantListOpen}
+								<ChevronUp class="h-4 w-4 ml-2" />
+							{:else}
+								<ChevronDown class="h-4 w-4 ml-2" />
+							{/if}
+						</Collapsible.Trigger>
+						<div class="flex items-center bg-primary text-primary-foreground rounded-full px-3 py-1">
+							<Users class="h-4 w-4 mr-1" />
+							<span class="font-bold">{participants.length}</span>
+						</div>
+					</div>
+				</Card.Header>
+				<Collapsible.Content>
+					<Card.Content>
+						<div class="space-y-4">
+							<div class="space-y-2">
+								{#each participants as participant}
+									<div class="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-100">
+										<div class="relative">
+											<Avatar.Root class="h-10 w-10 border-2 border-primary">
+												<Avatar.Image src={participant.avatar_url} alt={participant.name} />
+												<Avatar.Fallback>{participant.name.substring(0, 2).toUpperCase()}</Avatar.Fallback>
+											</Avatar.Root>
+											{#if participant.user_id === roomOwner}
+												<Crown class="absolute -top-1 -right-1 h-4 w-4 text-yellow-500" />
+											{/if}
+										</div>
+										<span class="font-medium">{participant.name}</span>
+										{#if votes[participant.user_id]}
+											<span class="ml-auto text-sm text-green-500">Voted</span>
+										{:else}
+											<span class="ml-auto text-sm text-gray-400">Not voted</span>
+										{/if}
+									</div>
+								{/each}
+							</div>
+							
+							{#if isRoomOwner}
+								<div class="pt-4 border-t">
+									<h3 class="text-lg font-semibold mb-2 flex items-center">
+										<Settings class="h-5 w-5 mr-2" />
+										Room Settings
+									</h3>
+									<div class="space-y-4">
+										<div class="flex items-center justify-between">
+											<Label.Root for="auto-reveal">Auto Reveal Votes</Label.Root>
+											<Switch.Root id="auto-reveal" />
+										</div>
+										<div class="flex items-center justify-between">
+											<Label.Root for="allow-change-vote">Allow Changing Votes</Label.Root>
+											<Switch.Root id="allow-change-vote" />
+										</div>
+										<Input placeholder="Custom voting options (comma-separated)" />
+										<Button variant="outline" class="w-full">Save Settings</Button>
+									</div>
+								</div>
+							{/if}
+						</div>
+					</Card.Content>
+				</Collapsible.Content>
+			</Collapsible.Root>
 		</Card.Root>
 
 		<Card.Root class="mb-6">
@@ -105,10 +173,12 @@
 				{:else}
 					<p class="mb-4 text-muted-foreground">No ticket set</p>
 				{/if}
-				<div class="flex gap-2">
-					<Input bind:value={newTicket} placeholder="Enter new ticket" />
-					<Button on:click={handleSetTicket} disabled={!newTicket}>Set Ticket</Button>
-				</div>
+				{#if isRoomOwner}
+					<div class="flex gap-2">
+						<Input bind:value={newTicket} placeholder="Enter new ticket" />
+						<Button on:click={handleSetTicket} disabled={!newTicket}>Set Ticket</Button>
+					</div>
+				{/if}
 			</Card.Content>
 		</Card.Root>
 
@@ -160,6 +230,19 @@
 					<div class="p-4 text-center">
 						<Loader2 class="mx-auto mb-2 h-8 w-8 animate-spin" />
 						<p class="text-muted-foreground">Waiting for all votes...</p>
+						{#if nonVoters.length > 0}
+							<div class="mt-4">
+								<p class="mb-2 text-sm font-medium">Waiting for:</p>
+								<div class="flex flex-wrap justify-center gap-2">
+									{#each nonVoters as nonVoter}
+										<Avatar.Root class="border-2 border-primary">
+											<Avatar.Image src={nonVoter.avatar_url} alt={nonVoter.name} />
+											<Avatar.Fallback>{nonVoter.name.substring(0, 2).toUpperCase()}</Avatar.Fallback>
+										</Avatar.Root>
+									{/each}
+								</div>
+							</div>
+						{/if}
 					</div>
 				{/if}
 			</Card.Content>

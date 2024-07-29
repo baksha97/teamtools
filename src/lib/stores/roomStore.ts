@@ -9,6 +9,7 @@ export interface Room {
 export interface Participant {
   user_id: string;
   avatar_url: string;
+  name: string;
 }
 
 export interface RoomStoreState {
@@ -23,7 +24,7 @@ export interface RoomStoreType {
   subscribe: (run: (value: RoomStoreState) => void) => () => void;
   createRoom: (roomId: string, creatorId: string) => Promise<void>;
   listRooms: () => Promise<void>;
-  joinRoom: (roomId: string, userId: string, avatarUrl: string) => Promise<void>;
+  joinRoom: (roomId: string, userId: string, avatarUrl: string, userName: string) => Promise<void>;
   setCurrentTicket: (ticketId: string) => void;
   vote: (userId: string, vote: string | null) => void;
   resetVotes: () => void;
@@ -79,7 +80,7 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
     update(state => ({ ...state, rooms: data as Room[] }));
   }
 
-  async function joinRoom(roomId: string, userId: string, avatarUrl: string) {
+  async function joinRoom(roomId: string, userId: string, avatarUrl: string, userName: string) {
     await init();
 
     update(state => {
@@ -95,14 +96,14 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
       const room = supabase.channel(`room-${roomId}`);
 
       room
-      .on('broadcast', { event: 'set-ticket' }, (payload) => {
-        console.log('Received set-ticket broadcast:', payload);
-        update(state => {
-          const newTicket = payload.ticketId;
-          console.log('Updating current ticket to:', newTicket);
-          return { ...state, currentTicket: newTicket, votes: {} };
-        });
-      })
+        .on('broadcast', { event: 'set-ticket' }, (payload) => {
+          console.log('Received set-ticket broadcast:', payload);
+          update(state => {
+            const newTicket = payload.ticketId;
+            console.log('Updating current ticket to:', newTicket);
+            return { ...state, currentTicket: newTicket, votes: {} };
+          });
+        })
         .on('broadcast', { event: 'vote' }, (payload) => {
           console.log('Received vote broadcast:', payload);
           update(state => {
@@ -131,7 +132,8 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
           .flat()
           .map(state => ({ 
             user_id: (state as any).user_id, 
-            avatar_url: (state as any).avatar_url 
+            avatar_url: (state as any).avatar_url,
+            name: (state as any).name
           }));
         console.log("Participants:", participants);
         update(innerState => ({ ...innerState, participants }));
@@ -139,7 +141,12 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
 
       room.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          room.track({ user_id: userId, avatar_url: avatarUrl, online_at: new Date().toISOString() });
+          room.track({ 
+            user_id: userId, 
+            avatar_url: avatarUrl, 
+            name: userName,
+            online_at: new Date().toISOString() 
+          });
         }
       });
 
@@ -173,8 +180,6 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
       return { ...state, currentRoom: null, participants: [], currentTicket: null, votes: {} };
     });
   }
-
-  
 
   function vote(userId: string, vote: string | null) {
     update(state => {
