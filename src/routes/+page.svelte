@@ -7,10 +7,10 @@
 
 	// // Reactive statement to update avatar when data changes
 	$: session = data?.session;
+
 	let fullName = "";
 	$: fullName = data.user?.user_metadata.full_name;
 	$: avatar = data.user?.user_metadata?.avatar_url;
-	$: console.log(fullName)
 </script>
 
 {#if session}

@@ -10,7 +10,14 @@ import {
   PUBLIC_SUPABASE_URL,
 } from "$env/static/public";
 
+import { dev } from '$app/environment';
+import { inject } from '@vercel/analytics';
+import { injectSpeedInsights } from '@vercel/speed-insights/sveltekit';
+
 import type { LayoutLoad } from "./$types";
+
+inject({ mode: dev ? 'development' : 'production' });
+injectSpeedInsights();
 
 export const load: LayoutLoad = async ({ data, depends, fetch }) => {
   /**

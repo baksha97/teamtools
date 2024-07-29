@@ -5,7 +5,6 @@
 	export let data: PageData;
 	
 	$: profile = data.profile;
-	$: console.log(data.user);
 	$: avatar = data?.user?.user_metadata?.avatar_url || '';
 	</script>
 	

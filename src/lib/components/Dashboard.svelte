@@ -1,18 +1,19 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import * as Avatar from '$lib/components/ui/avatar';
-	import { Button } from '$lib/components/ui/button';
+	import { goto } from '$app/navigation'; // Import the goto function from SvelteKit
+	import * as Card from '$lib/components/ui/card'; // Import Card components
+	import * as Avatar from '$lib/components/ui/avatar'; // Import Avatar components
+	import { Button } from '$lib/components/ui/button'; // Import Button component
+
 	// Define your micro apps here
 	const microApps = [
 		{ name: 'Profile', path: '/profile', icon: '👤' },
-		{ name: 'App 2', path: '/app2', icon: '📁' },
+		{ name: 'Poker', path: '/apps/poker/rooms', icon: '📁' },
 		{ name: 'App 3', path: '/app3', icon: '📅' }
 		// Add more apps as needed
 	];
 
-	export let fullName;
-	export let avatar;
+	export let fullName: string; // Define the type for fullName
+	export let avatar: string; // Define the type for avatar
 </script>
 
 <div class="p-6">
