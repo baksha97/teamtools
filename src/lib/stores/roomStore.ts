@@ -29,6 +29,7 @@ export interface RoomStoreType {
   vote: (userId: string, vote: string | null) => void;
   resetVotes: () => void;
   leaveRoom: () => void;
+  initRoomSubscription: () => Promise<void>; // Add this line
 }
 
 export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
@@ -51,6 +52,8 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
   }
 
   async function initRoomSubscription() {
+    if (initialized) return; // Add this line to prevent multiple initializations
+    initialized = true;      // Add this line
     supabase
       .channel('public:rooms')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rooms' }, payload => {
@@ -224,5 +227,6 @@ export function createRoomStore(supabase: SupabaseClient): RoomStoreType {
     setCurrentTicket,
     vote,
     resetVotes,
+    initRoomSubscription, // Add this line
   };
 }
