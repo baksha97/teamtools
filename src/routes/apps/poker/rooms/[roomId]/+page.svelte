@@ -154,6 +154,7 @@
 										</div>
 										<Input placeholder="Custom voting options (comma-separated)" />
 										<Button variant="outline" class="w-full">Save Settings</Button>
+										<Button variant="destructive" class="w-full" on:click={handleResetVotes}>Reset Votes</Button>
 									</div>
 								</div>
 							{/if}
@@ -198,7 +199,6 @@
 						</Button>
 					{/each}
 				</div>
-				<Button on:click={handleResetVotes} variant="destructive">Reset Votes</Button>
 			</Card.Content>
 		</Card.Root>
 
