@@ -81,7 +81,7 @@
 	  {} as Record<string, number>
 	);
 	$: nonVoters = state?.participants.filter(p => !state.votes[p.user_id]) || [];
-  </script>
+</script>
 
 {#if !state || state.isLoading}
   <div class="flex justify-center items-center h-screen">
@@ -251,4 +251,4 @@
 		<Button variant="outline" class="w-full" on:click={leaveRoom}>Leave Room</Button>
 	  </div>
 	</div>
-  {/if}
+{/if}

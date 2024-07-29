@@ -1,7 +1,26 @@
-// src/lib/stores/RoomStore.ts
 import { writable } from 'svelte/store';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { setContext, getContext } from 'svelte';
+
+// Define types for events
+type SetTicketEvent = { ticketId: string };
+type VoteEvent = { userId: string; vote: string | null };
+type ResetVotesEvent = {};
+
+type BroadcastEvent<T> = {
+  type: "broadcast";
+  event: string;
+  payload: T;
+};
+
+// Define types for presence state
+interface PresenceState {
+  presence_ref: string;
+  user_id: string;
+  avatar_url: string;
+  name: string;
+  online_at: string;
+}
 
 export interface Participant {
   user_id: string;
@@ -32,7 +51,7 @@ export class RoomStore {
     isLoading: true,
     error: null
   });
-  private channel: ReturnType<SupabaseClient['channel']> | null = null;
+  private channel: RealtimeChannel | null = null;
 
   constructor(supabase: SupabaseClient) {
     this.supabase = supabase;
@@ -79,34 +98,37 @@ export class RoomStore {
     this.channel = this.supabase.channel(`room-${roomId}`);
 
     this.channel
-      .on('broadcast', { event: 'set-ticket' }, (payload) => {
-        this.store.update(state => ({ ...state, currentTicket: payload.ticketId, votes: {} }));
-      })
-      .on('broadcast', { event: 'vote' }, (payload) => {
-        this.store.update(state => {
-          const { userId, vote } = payload;
-          const newVotes = { ...state.votes };
-          if (vote === null) {
-            delete newVotes[userId];
-          } else {
-            newVotes[userId] = vote;
-          }
-          return { ...state, votes: newVotes };
-        });
-      })
-      .on('broadcast', { event: 'reset-votes' }, () => {
-        this.store.update(state => ({ ...state, votes: {} }));
+    .on<SetTicketEvent>('broadcast', { event: 'set-ticket' }, (message) => {
+      const { ticketId } = message.payload.payload;
+      this.store.update(state => ({ ...state, currentTicket: ticketId, votes: {} }));
+    })
+    .on<VoteEvent>('broadcast', { event: 'vote' }, (message) => {
+      console.log('Received message:::::::::::', message);
+      const { userId, vote } = message.payload;
+      this.store.update(state => {
+        const newVotes = { ...state.votes };
+        if (vote === null) {
+          delete newVotes[userId];
+        } else {
+          newVotes[userId] = vote;
+        }
+        return { ...state, votes: newVotes };
       });
+    })
+    .on<ResetVotesEvent>('broadcast', { event: 'reset-votes' }, () => {
+      this.store.update(state => ({ ...state, votes: {} }));
+    });
 
     this.channel.on('presence', { event: 'sync' }, () => {
       const presenceState = this.channel!.presenceState();
-      const participants = Object.values(presenceState)
-        .flat()
-        .map(state => ({ 
-          user_id: (state as any).user_id, 
-          avatar_url: (state as any).avatar_url,
-          name: (state as any).name
-        }));
+      const participants = Object.entries(presenceState).map(([_, presences]) => {
+        const presence = presences[0] as PresenceState;
+        return {
+          user_id: presence.user_id,
+          avatar_url: presence.avatar_url,
+          name: presence.name
+        };
+      });
       this.store.update(state => ({ ...state, participants }));
     });
 
@@ -127,8 +149,8 @@ export class RoomStore {
       this.channel.send({
         type: 'broadcast',
         event: 'set-ticket',
-        ticketId
-      });
+        payload: { ticketId }
+      } as BroadcastEvent<SetTicketEvent>);
     }
     this.store.update(state => ({ ...state, currentTicket: ticketId, votes: {} }));
   }
@@ -155,9 +177,8 @@ export class RoomStore {
       this.channel.send({
         type: 'broadcast',
         event: 'vote',
-        userId,
-        vote
-      });
+        payload: { userId, vote }
+      } as BroadcastEvent<VoteEvent>);
     }
     this.store.update(state => {
       const newVotes = { ...state.votes };
@@ -175,7 +196,8 @@ export class RoomStore {
       this.channel.send({
         type: 'broadcast',
         event: 'reset-votes',
-      });
+        payload: {}
+      } as BroadcastEvent<ResetVotesEvent>);
     }
     this.store.update(state => ({ ...state, votes: {} }));
   }
