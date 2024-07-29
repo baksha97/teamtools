@@ -99,7 +99,7 @@ export class RoomStore {
 
     this.channel
     .on<SetTicketEvent>('broadcast', { event: 'set-ticket' }, (message) => {
-      const { ticketId } = message.payload.payload;
+      const { ticketId } = message.payload;
       this.store.update(state => ({ ...state, currentTicket: ticketId, votes: {} }));
     })
     .on<VoteEvent>('broadcast', { event: 'vote' }, (message) => {
