@@ -4,13 +4,15 @@
         PUBLIC_JIRA_CLIENT_ID, 
         PUBLIC_JIRA_REDIRECT_URI 
     } from "$env/static/public";
+    import { page } from '$app/stores';  
 
     export let variant: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" = "default";
     export let size: "default" | "sm" | "lg" | "icon" = "default";
     export let buttonText = "Link your Jira account";
 
     const clientId = PUBLIC_JIRA_CLIENT_ID;
-    const redirectUri = PUBLIC_JIRA_REDIRECT_URI;
+    const redirectUri = $page.url.origin + PUBLIC_JIRA_REDIRECT_URI;
+    console.log(redirectUri);
     const scopes = "read:me read:account read:jira-user read:jira-work write:jira-work manage:jira-project";
     const audience = 'api.atlassian.com';
     const responseType = 'code';
