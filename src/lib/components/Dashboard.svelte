@@ -8,7 +8,7 @@
 	const microApps = [
 		{ name: 'Profile', path: '/profile', icon: '👤' },
 		{ name: 'Poker', path: '/apps/poker/rooms', icon: '📁' },
-		// { name: 'Jira Integration', path: '/auth/jira', icon: '📅' }
+		{ name: 'Jira Token Check', path: '/api/jira/issueId', icon: '📅' }
 		// Add more apps as needed
 	];
 
