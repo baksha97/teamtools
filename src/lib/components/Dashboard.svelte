@@ -3,12 +3,13 @@
 	import * as Card from '$lib/components/ui/card'; // Import Card components
 	import * as Avatar from '$lib/components/ui/avatar'; // Import Avatar components
 	import { Button } from '$lib/components/ui/button'; // Import Button component
+    import LinkJira from "$lib/components/LinkJira.svelte";
 
 	// Define your micro apps here
 	const microApps = [
 		{ name: 'Profile', path: '/profile', icon: '👤' },
 		{ name: 'Poker', path: '/apps/poker/rooms', icon: '📁' },
-		{ name: 'App 3', path: '/app3', icon: '📅' }
+		// { name: 'Jira Integration', path: '/auth/jira', icon: '📅' }
 		// Add more apps as needed
 	];
 
@@ -27,6 +28,7 @@
 		<h1 class="text-2xl font-bold">Welcome, {fullName}!</h1>
 	</div>
 
+
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 		{#each microApps as app}
 			<Card.Root class="cursor-pointer transition-colors hover:bg-secondary">
@@ -39,4 +41,6 @@
 			</Card.Root>
 		{/each}
 	</div>
+	
+	<LinkJira />
 </div>
