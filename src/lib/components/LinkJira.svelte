@@ -11,7 +11,12 @@
     export let buttonText = "Link your Jira account";
 
     const clientId = PUBLIC_JIRA_CLIENT_ID;
-    const redirectUri = $page.url.origin + PUBLIC_JIRA_REDIRECT_URI;
+    let redirectUri = $page.url.origin + PUBLIC_JIRA_REDIRECT_URI;
+     // We need to work around code spaces handling redirects super weirdly.
+     if(PUBLIC_JIRA_CLIENT_ID === "aSUdt6EMOkYRo0ZYYgnePOuFYrCxmJf2") {
+        // if testing in a github codespace, use the codespace's hostname and not origin since there's a mismatch and it'll become localhost.
+        redirectUri = "https://obscure-parakeet-9755p9wg7g629p9x-5173.app.github.dev/auth/jira/callback"
+    }
     console.log(redirectUri);
     const scopes = "read:me read:account read:jira-user read:jira-work write:jira-work manage:jira-project";
     const audience = 'api.atlassian.com';
