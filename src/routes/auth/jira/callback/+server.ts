@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { JIRA_CLIENT_SECRET } from '$env/static/private';
 import { PUBLIC_JIRA_CLIENT_ID, PUBLIC_JIRA_REDIRECT_URI } from '$env/static/public';
+import { page } from '$app/stores';  
 
 export const GET: RequestHandler = async ({ request, cookies, url, locals }) => {
     const code = url.searchParams.get('code');
@@ -9,7 +10,8 @@ export const GET: RequestHandler = async ({ request, cookies, url, locals }) => 
     if (!code) {
         return json({ error: 'No authorization code provided' }, { status: 400 });
     }
-
+    const redirectUri = url.origin + PUBLIC_JIRA_REDIRECT_URI;
+    console.log(redirectUri);
     try {
         // Exchange the authorization code for tokens
         const response = await fetch('https://auth.atlassian.com/oauth/token', {
@@ -20,7 +22,7 @@ export const GET: RequestHandler = async ({ request, cookies, url, locals }) => 
                 client_id: PUBLIC_JIRA_CLIENT_ID,
                 client_secret: JIRA_CLIENT_SECRET,
                 code: code,
-                redirect_uri: PUBLIC_JIRA_REDIRECT_URI
+                redirect_uri: redirectUri
             })
         });
 
