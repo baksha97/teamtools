@@ -18,7 +18,7 @@
         redirectUri = "https://obscure-parakeet-9755p9wg7g629p9x-5173.app.github.dev/auth/jira/callback"
     }
     console.log(redirectUri);
-    const scopes = "read:me read:account read:jira-user read:jira-work write:jira-work manage:jira-project";
+    const scopes = "offline_access read:me read:account read:jira-user read:jira-work write:jira-work manage:jira-project";
     const audience = 'api.atlassian.com';
     const responseType = 'code';
     const prompt = 'consent';

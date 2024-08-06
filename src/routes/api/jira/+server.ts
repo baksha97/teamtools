@@ -9,13 +9,24 @@ const JIRA_API_URL = 'https://api.atlassian.com/ex/jira/';
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
     const jiraToken = cookies.get('jira_access_token');
+    const jira_refresh_token = cookies.get('jira_refresh_token');
+    console.log(jiraToken);
+    console.log(jira_refresh_token);
     if (!jiraToken) {
         return json({ error: 'No Jira token found' }, { status: 401 });
     }
 
     const path = url.searchParams.get('path');
     if (!path) {
-        return json({ error: 'No path provided' }, { status: 400 });
+        return json(
+            {
+                error: 'No path provided',
+                access: jiraToken,
+                refresh: jira_refresh_token,
+            },
+            { status: 400 }
+        )
+            ;
     }
 
     // Split the path parameter to separate the Jira instance ID and the API path
@@ -24,7 +35,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
     // Construct the full Jira API URL
     const jiraUrl = new URL(`${instanceId}/${apiPath}`, JIRA_API_URL);
-    
+
     // Copy all query parameters from the original path
     const originalQueryString = path.split('?')[1];
     if (originalQueryString) {
