@@ -8,8 +8,8 @@
 	const microApps = [
 		{ name: 'Profile', path: '/profile', icon: '👤' },
 		{ name: 'Poker', path: '/apps/poker/rooms', icon: '📁' },
-		{ name: 'Jira Token Check', path: '/api/jira/issueId', icon: '📅' }
-		// Add more apps as needed
+		{ name: 'Jira Token Check', path: '/api/jira', icon: '📅' },
+		{ name: 'Jira Component Example', path: '/apps/jira', icon: '📅' },
 	];
 
 	export let fullName: string; // Define the type for fullName

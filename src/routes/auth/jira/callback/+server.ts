@@ -18,7 +18,7 @@ export const GET: RequestHandler = async ({ request, cookies, url, locals }) => 
     if(PUBLIC_JIRA_CLIENT_ID === "aSUdt6EMOkYRo0ZYYgnePOuFYrCxmJf2") {
         // if testing in a github codespace, use the codespace's hostname and not origin since there's a mismatch and it'll become localhost.
         redirectUri = "https://obscure-parakeet-9755p9wg7g629p9x-5173.app.github.dev/auth/jira/callback"
-        finalRedirect = "https://obscure-parakeet-9755p9wg7g629p9x-5173.app.github.dev"
+        finalRedirect = "https://obscure-parakeet-9755p9wg7g629p9x-5173.app.github.dev/api/jira"
     }
     console.log(redirectUri);
 
@@ -41,8 +41,19 @@ export const GET: RequestHandler = async ({ request, cookies, url, locals }) => 
 
     const data = await response.json();
 
+    console.log(data);
+
     // Set the access token in a secure HTTP-only cookie
     cookies.set('jira_access_token', data.access_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: '/',
+        maxAge: data.expires_in
+    });
+
+    // Set the access token in a secure HTTP-only cookie
+    cookies.set('jira_refresh_token', data.refresh_token, {
         httpOnly: true,
         secure: true,
         sameSite: 'strict',

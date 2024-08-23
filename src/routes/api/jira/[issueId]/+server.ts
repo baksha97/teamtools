@@ -1,17 +1,21 @@
-// src/routes/api/jira/[...path]/+server.ts
-
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import { JIRA_RESOURCE_ID } from '$env/static/private';
 
-const JIRA_API_URL = 'https://api.atlassian.com/ex/jira/';
+export async function GET({ params, fetch }) {
+    const { issueId } = params;
+    const url = `/api/jira?path=${JIRA_RESOURCE_ID}/rest/api/3/issue/${issueId}?expand=names,renderedFields&fieldsByKeys=true`;
 
-export const GET: RequestHandler = async ({ params, request, cookies }) => {
-    const jiraToken = cookies.get('jira_access_token');
-    if (!jiraToken) {
-        return json({ error: 'No Jira token found' }, { status: 401 });
+    try {
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return json(data);
+    } catch (error) {
+        console.error('Error fetching Jira issue:', error);
+        return json({ error: 'An error occurred while fetching the issue' }, { status: 500 });
     }
-    
-    return json({data: jiraToken});
-};
-
-// Implement POST, PUT, DELETE methods similarly if needed
+}
